@@ -14,7 +14,6 @@ from win11toast import toast
 
 from redisUtils import RedisClient
 
-no_list = ["综艺", "音乐", "美妆", "影视", "艺人", "电视剧", "电影", "动漫", "游戏", "时尚"]
 os.environ['NO_PROXY'] = 'weibo.com'
 # 获取当前文件路径
 path = os.path.abspath(os.path.dirname(__file__))
