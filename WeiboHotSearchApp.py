@@ -130,8 +130,8 @@ class WeiboHotSearchApp:
     def sendToast(self, category, word, realpos, label_name, url_word):
         if self.send_toast_enabled.get():
             if category is not None and category != "":
-                if not any((self.excluded_tags[tag].get() and tag in category) for tag in
-                           self.excluded_tags) and label_name in ["沸", "爆"]:
+                if label_name == "爆" or (not any((self.excluded_tags[tag].get() and tag in category) for tag in
+                                                  self.excluded_tags) and label_name == "沸"):
                     redis_word = "weibo_hot_" + word
                     old_label = self.redis.get(redis_word)
                     # 加上redis的判断，防止重复发送
