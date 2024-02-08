@@ -71,13 +71,14 @@ class WeiboHotSearchApp:
         # 添加发送通知开关到侧边栏
         send_toast_frame = ttk.Frame(sidebar)
         send_toast_frame.pack(pady=5)
-        ttk.Checkbutton(send_toast_frame, text="发送沸爆点热搜通知", variable=self.send_toast_enabled).pack(
-            side=tk.LEFT)
+        send_button = ttk.Checkbutton(send_toast_frame, text="发送沸爆点热搜通知",
+                                      variable=self.send_toast_enabled)
+        send_button.pack(side=tk.LEFT)
 
         # 添加排除标签复选框到侧边栏
         exclude_frame = ttk.Frame(sidebar)
         exclude_frame.pack(pady=5)
-        exclude_label = ttk.Label(exclude_frame, text="通知排除标签:")
+        exclude_label = ttk.Label(exclude_frame, text="沸点通知排除标签:")
         exclude_label.grid(row=0, column=0, sticky="w", padx=5)
         col = 0
         row = 1
@@ -130,8 +131,8 @@ class WeiboHotSearchApp:
     def sendToast(self, category, word, realpos, label_name, url_word):
         if self.send_toast_enabled.get():
             if category is not None and category != "":
-                if not any((self.excluded_tags[tag].get() and tag in category) for tag in
-                           self.excluded_tags) and label_name in ["沸", "爆"]:
+                if label_name == "爆" or (not any((self.excluded_tags[tag].get() and tag in category) for tag in
+                                                  self.excluded_tags) and label_name == "沸"):
                     redis_word = "weibo_hot_" + word
                     old_label = self.redis.get(redis_word)
                     # 加上redis的判断，防止重复发送
