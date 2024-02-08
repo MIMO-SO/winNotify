@@ -20,11 +20,6 @@ path = os.path.abspath(os.path.dirname(__file__))
 icon = "file:///" + path + "/icon3.png"
 
 
-def selfToast(word, realpos, label_name, open_url, button, icon):
-    toast(word, '热搜：' + str(realpos) + '，热度：' + label_name, on_click=open_url,
-          button=button, icon=icon)
-
-
 class WeiboHotSearchApp:
     def __init__(self, root):
         self.root = root
@@ -48,19 +43,20 @@ class WeiboHotSearchApp:
             "游戏": tk.BooleanVar(value=True),
             "网红": tk.BooleanVar(value=True),
             "幽默": tk.BooleanVar(value=False),
+            "数码": tk.BooleanVar(value=False),
+            "美食": tk.BooleanVar(value=False),
             "财经": tk.BooleanVar(value=False),
             "体育": tk.BooleanVar(value=False),
             "情感": tk.BooleanVar(value=False),
             "剧集": tk.BooleanVar(value=False),
+            "时尚": tk.BooleanVar(value=False),
             "互联网": tk.BooleanVar(value=False),
             "汽车": tk.BooleanVar(value=False),
             "社会新闻": tk.BooleanVar(value=False),
             "国内时政": tk.BooleanVar(value=False),
+            "国外时政": tk.BooleanVar(value=False),
         }
         self.redis = RedisClient
-        self.tree = None
-        self.icon = None
-        self.task_id = None
 
         self.create_tray_icon()
         self.create_widgets()
@@ -106,8 +102,8 @@ class WeiboHotSearchApp:
         refresh_button.pack(pady=5)
 
         # 创建一个Frame来容纳TreeView和滚动条
-        tree_frame = ttk.Frame(self.root)
-        tree_frame.pack(expand=True, fill=tk.BOTH)
+        tree_frame = ttk.Frame(self.root, width=600)
+        tree_frame.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
 
         self.tree = ttk.Treeview(tree_frame, columns=("Rank", "Title", "Hotness", "Label"), show="headings",
                                  style="Custom.Treeview")
@@ -115,22 +111,21 @@ class WeiboHotSearchApp:
         self.tree.heading("Title", text="标题", anchor="center")
         self.tree.heading("Hotness", text="热度", anchor="center")
         self.tree.heading("Label", text="标签", anchor="center")
-        self.tree.column("Rank", width=50, anchor="center")  # 设置排名列宽度为80像素
-        self.tree.column("Title", width=250, anchor="center")  # 设置标题列宽度为200像素
-        self.tree.column("Hotness", width=50, anchor="center")  # 设置热度列宽度为80像素
-        self.tree.column("Label", width=100, anchor="center")  # 设置标签列宽度为80像素
+        self.tree.column("Rank", width=50, anchor="center")  # 设置排名列宽度为50像素
+        self.tree.column("Title", width=250, anchor="center")  # 设置标题列宽度为250像素
+        self.tree.column("Hotness", width=50, anchor="center")  # 设置热度列宽度为50像素
+        self.tree.column("Label", width=100, anchor="center")  # 设置标签列宽度为100像素
         self.tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
-
-        # 添加滚动条
-        scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.tree.config(yscrollcommand=scrollbar.set)
-        self.tree.tag_bind("hot_search", "<Button-1>", self.open_webpage)  # 绑定单击事件
+        self.tree.tag_bind("hot_search", "<Double-1>", self.open_webpage)  # 绑定双击事件
 
         # 创建样式
         self.style.configure("Custom.Treeview", rowheight=24)  # 调整默认行高
         # 设置窗口的透明度（值为0.0到1.0之间）
         self.root.attributes('-alpha', 0.95)
+
+    def selfToast(self, word, realpos, label_name, open_url, button, icon_):
+        toast(word, '热搜：' + str(realpos) + '，热度：' + label_name, on_click=open_url,
+              button=button, icon=icon_)
 
     def sendToast(self, category, word, realpos, label_name, url_word):
         if self.send_toast_enabled.get():
@@ -145,8 +140,9 @@ class WeiboHotSearchApp:
                         button = {'activationType': 'protocol', 'arguments': open_url,
                                   'content': '点击打开'}
                         threading.Thread(
-                            target=selfToast(word, realpos, label_name, open_url, button, icon),
-                            daemon=True).start()
+                            target=self.selfToast,  # 将 target 参数设置为函数本身
+                            args=(word, realpos, label_name, open_url, button, icon),  # 将函数参数传递给 args 参数
+                        ).start()
                         self.redis.setex(redis_word, 60 * 60 * 24, str(label_name))
 
     def update_hot_search(self):
@@ -156,10 +152,11 @@ class WeiboHotSearchApp:
             if jsonText.get("http_code") == 200:
                 band_list = jsonText.get("data").get("band_list")
                 if band_list:
-                    band_list = band_list[:min(20, len(band_list))]
+                    band_list = band_list[:min(25, len(band_list))]
                     self.tree.delete(*self.tree.get_children())
                     index = 0
                     for i, band in enumerate(band_list):
+                        if index >= 20: break
                         label_name = band.get("label_name")
                         if label_name is None:
                             continue
@@ -219,7 +216,7 @@ class WeiboHotSearchApp:
         )
         self.icon = Icon("微博热搜榜", icon_image, "微博热搜榜", menu)  # 创建一个Icon对象，并存储在实例变量中
         self.icon.onclick = self.show_window
-        threading.Thread(target=self.icon.run, daemon=True).start()
+        threading.Thread(target=self.icon.run).start()
 
     def show_window(self, icon, item):
         self.root.deiconify()
