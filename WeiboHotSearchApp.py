@@ -2,6 +2,7 @@ import ctypes
 import json
 import os
 import threading
+import time
 import tkinter as tk
 import urllib.parse
 import webbrowser
@@ -28,7 +29,7 @@ class WeiboHotSearchApp:
         self.style = ttk.Style()
 
         self.refresh_interval = tk.StringVar()
-        self.refresh_interval.set("60")  # 默认刷新间隔为60秒
+        self.refresh_interval.set("120")  # 默认刷新间隔为60秒
         self.send_toast_enabled = tk.BooleanVar()
         self.send_toast_enabled.set(True)  # 默认开启通知
         self.excluded_tags = {  # 默认排除的标签
@@ -106,23 +107,24 @@ class WeiboHotSearchApp:
         tree_frame = ttk.Frame(self.root, width=600)
         tree_frame.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
 
-        self.tree = ttk.Treeview(tree_frame, columns=("Rank", "Title", "Hotness", "Label"), show="headings",
+        self.tree = ttk.Treeview(tree_frame, columns=("Rank", "Title", "HotnessNum", "Hotness", "Label"), show="headings",
                                  style="Custom.Treeview")
         self.tree.heading("Rank", text="排名", anchor="center")
         self.tree.heading("Title", text="标题", anchor="center")
+        self.tree.heading("HotnessNum", text="热值", anchor="center")
         self.tree.heading("Hotness", text="热度", anchor="center")
         self.tree.heading("Label", text="标签", anchor="center")
         self.tree.column("Rank", width=50, anchor="center")  # 设置排名列宽度为50像素
         self.tree.column("Title", width=250, anchor="center")  # 设置标题列宽度为250像素
+        self.tree.column("HotnessNum", width=60, anchor="center")  # 设置热值列宽度为50像素
         self.tree.column("Hotness", width=50, anchor="center")  # 设置热度列宽度为50像素
         self.tree.column("Label", width=100, anchor="center")  # 设置标签列宽度为100像素
         self.tree.pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
         self.tree.tag_bind("hot_search", "<Double-1>", self.open_webpage)  # 绑定双击事件
-
         # 创建样式
         self.style.configure("Custom.Treeview", rowheight=24)  # 调整默认行高
         # 设置窗口的透明度（值为0.0到1.0之间）
-        self.root.attributes('-alpha', 0.95)
+        self.root.attributes('-alpha', 0.96)
 
     def selfToast(self, word, realpos, label_name, open_url, button, icon_):
         toast(word, '热搜：' + str(realpos) + '，热度：' + label_name, on_click=open_url,
@@ -147,6 +149,11 @@ class WeiboHotSearchApp:
                         self.redis.setex(redis_word, 60 * 60 * 24, str(label_name))
 
     def update_hot_search(self):
+        # 如果在晚上11点到早上7点之间，不发送通知
+        now = time.localtime(time.time())
+        if 23 <= now.tm_hour or now.tm_hour <= 6:
+            self.task_id = self.root.after(int(self.refresh_interval.get()) * 1000, self.update_hot_search)
+            return
         try:
             response = requests.get("https://weibo.com/ajax/statuses/hot_band", timeout=5)
             jsonText = json.loads(response.text)
@@ -161,13 +168,14 @@ class WeiboHotSearchApp:
                         label_name = band.get("label_name")
                         if label_name is None:
                             continue
+                        raw_hot = band.get("raw_hot")
                         category = band.get("category")
                         word = band.get("word")
                         url_word = urllib.parse.quote(band.get("word_scheme"))
                         realpos = band.get("realpos")
                         # 展示热搜
-                        self.tree.insert("", "end", values=(index + 1, word, label_name, category, url_word),
-                                         tags=("hot_search",))
+                        self.tree.insert("", "end", values=(index + 1, word, raw_hot, label_name, category, url_word),
+                                         tags=("hot_search", ))
                         index += 1
                         # 发送通知
                         self.sendToast(category, word, realpos, label_name, url_word)
@@ -192,7 +200,7 @@ class WeiboHotSearchApp:
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
 
-        window_width = 650
+        window_width = 710
         window_height = 430
 
         x = (screen_width - window_width) // 2
@@ -203,7 +211,7 @@ class WeiboHotSearchApp:
 
     def open_webpage(self, event):
         item = self.tree.identify_row(event.y)  # 获取选中项
-        word = self.tree.item(item, "values")[4]  # 获取选中行的第4列
+        word = self.tree.item(item, "values")[5]  # 获取选中行的第4列
         url = f"https://s.weibo.com/weibo?q={word}"
         webbrowser.open(url)
 
