@@ -34,6 +34,7 @@ class WeiboHotSearchApp:
         self.send_toast_enabled.set(True)  # 默认开启通知
         self.excluded_tags = {  # 默认排除的标签
             "综艺": tk.BooleanVar(value=True),
+            "演出": tk.BooleanVar(value=True),
             "音乐": tk.BooleanVar(value=True),
             "美妆": tk.BooleanVar(value=True),
             "影视": tk.BooleanVar(value=True),
@@ -42,6 +43,7 @@ class WeiboHotSearchApp:
             "电影": tk.BooleanVar(value=True),
             "动漫": tk.BooleanVar(value=True),
             "游戏": tk.BooleanVar(value=True),
+            "电竞": tk.BooleanVar(value=True),
             "网红": tk.BooleanVar(value=True),
             "幽默": tk.BooleanVar(value=False),
             "数码": tk.BooleanVar(value=False),
@@ -56,6 +58,8 @@ class WeiboHotSearchApp:
             "社会新闻": tk.BooleanVar(value=False),
             "国内时政": tk.BooleanVar(value=False),
             "国外时政": tk.BooleanVar(value=False),
+            "作品衍生": tk.BooleanVar(value=False),
+            "健康医疗": tk.BooleanVar(value=False),
         }
         self.redis = RedisClient
 
